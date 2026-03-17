@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الجدول الدوري التفاعلي</title>
+    <!-- استخدام خطوط جوجل العربية لتصميم أجمل -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- استخدام Tailwind CSS للتنسيق السريع -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* حاوية الجدول الدوري للتمرير الأفقي في الشاشات الصغيرة */
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        /* شبكة الجدول الدوري */
+        .periodic-table {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(60px, 1fr));
+            gap: 6px;
+            min-width: 1100px; /* لضمان عدم تداخل العناصر */
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* تصميم المربع الخاص بكل عنصر */
+        .element-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .element-box:hover {
+            transform: scale(1.15) translateY(-5px);
+            z-index: 10;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            filter: brightness(1.2);
+        }
+
+        /* فئة التعتيم عند استخدام الفلتر */
+        .element-box.dimmed {
+            opacity: 0.15;
+            filter: grayscale(80%);
+            transform: none !important;
+            box-shadow: none !important;
+            z-index: 1 !important;
+        }
+
+        .el-number {
+            font-size: 0.75rem;
+            position: absolute;
+            top: 4px;
+            right: 6px; /* نقلناه لليمين لكي لا يتلامس مع الرموز الإنجليزية التي تتمدد لليسار */
+            opacity: 0.8;
+            font-weight: 700;
+        }
+
+        .el-symbol {
+            font-size: 1.15rem; /* تصغير الحجم قليلاً */
+            font-weight: 900;
+            line-height: 1;
+            margin-top: 16px; /* زيادة المسافة العلوية لدفعه للأسفل بعيداً عن الرقم */
+        }
+
+        .el-name {
+            font-size: 0.65rem;
+            margin-top: 4px;
+            text-align: center;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ألوان الفئات الكيميائية */
+        .alkali-metal { background: linear-gradient(135deg, #ef4444, #b91c1c); } /* Red */
+        .alkaline-earth { background: linear-gradient(135deg, #f97316, #c2410c); } /* Orange */
+        .transition-metal { background: linear-gradient(135deg, #eab308, #a16207); } /* Yellow */
+        .post-transition { background: linear-gradient(135deg, #22c55e, #15803d); } /* Green */
+        .metalloid { background: linear-gradient(135deg, #14b8a6, #0f766e); } /* Teal */
+        .nonmetal { background: linear-gradient(135deg, #3b82f6, #1d4ed8); } /* Blue */
+        .halogen { background: linear-gradient(135deg, #8b5cf6, #6d28d9); } /* Purple */
+        .noble-gas { background: linear-gradient(135deg, #ec4899, #be185d); } /* Pink */
+        .lanthanide { background: linear-gradient(135deg, #a8a29e, #57534e); } /* Stone */
+        .actinide { background: linear-gradient(135deg, #78716c, #44403c); } /* Warm Gray */
+        .unknown { background: linear-gradient(135deg, #475569, #1e293b); } /* Slate */
+
+        /* النافذة المنبثقة (Modal) */
+        #modal-overlay {
+            backdrop-filter: blur(8px);
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-content {
+            background: linear-gradient(to bottom right, #1e293b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar {
+            height: 10px;
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- الرأس -->
+    <header class="text-center py-8 bg-slate-800 border-b border-slate-700 shadow-lg">
+        <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-emerald-400 mb-2 py-4 leading-relaxed">
+            الجدول الدوري التفاعلي
+        </h1>
+        <p class="text-slate-400 text-sm md:text-base">انقر على أي عنصر لاستكشاف خصائصه، تاريخ اكتشافه، وأبرز استخداماته في حياتنا.</p>
+    </header>
+
+    <!-- مفتاح الألوان (Legend) -->
+    <div class="max-w-6xl mx-auto px-4 mt-8 w-full">
+        <div class="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold mb-6">
+            <span class="px-3 py-1 rounded-full bg-blue-600 text-white">لا فلزات</span>
+            <span class="px-3 py-1 rounded-full bg-red-600 text-white">فلزات قلوية</span>
+            <span class="px-3 py-1 rounded-full bg-orange-600 text-white">قلوية ترابية</span>
+            <span class="px-3 py-1 rounded-full bg-yellow-600 text-white">فلزات انتقالية</span>
+            <span class="px-3 py-1 rounded-full bg-green-600 text-white">بعد انتقالية</span>
+            <span class="px-3 py-1 rounded-full bg-teal-600 text-white">أشباه الفلزات</span>
+            <span class="px-3 py-1 rounded-full bg-purple-600 text-white">هالوجينات</span>
+            <span class="px-3 py-1 rounded-full bg-pink-600 text-white">غازات نبيلة</span>
+            <span class="px-3 py-1 rounded-full bg-stone-500 text-white">لانثانيدات</span>
+            <span class="px-3 py-1 rounded-full bg-stone-700 text-white">أكتينيدات</span>
+        </div>
+
+        <!-- فلتر حالات المادة -->
+        <div class="flex justify-center gap-3 text-sm">
+            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-700 text-white font-bold transition-all shadow-md" data-filter="all">الكل</button>
+            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="solid">صلب</button>
+            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="liquid">سائل</button>
+            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="gas">غاز</button>
+        </div>
+    </div>
+
+    <!-- حاوية الجدول الدوري -->
+    <main class="flex-grow flex items-center justify-center mb-10">
+        <div class="table-scroll" dir="ltr">
+            <div id="periodic-table" class="periodic-table">
+                <!-- سيتم ملء العناصر هنا بواسطة JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- تذييل -->
+    <footer class="text-center py-4 text-slate-500 text-xs border-t border-slate-800 mt-auto">
+        تم التصميم باستخدام تقنيات الويب الحديثة - واجهة تعليمية تفاعلية
+    </footer>
+
+    <!-- النافذة المنبثقة (Modal) -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-content w-full max-w-2xl rounded-2xl overflow-hidden relative">
+            <!-- زر الإغلاق -->
+            <button onclick="closeModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <!-- رأس النافذة المنبثقة -->
+            <div id="modal-header" class="p-8 pb-6 flex items-center gap-6 text-white">
+                <div id="modal-symbol-box" class="w-24 h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative">
+                    <span id="modal-number" class="text-sm font-bold opacity-80 absolute top-2 right-3"></span>
+                    <span id="modal-symbol" class="text-5xl font-black"></span>
+                </div>
+                <div>
+                    <h2 id="modal-name" class="text-4xl font-black mb-4"></h2>
+                    <span id="modal-category" class="px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm inline-block"></span>
+                </div>
+            </div>
+
+            <!-- محتوى النافذة المنبثقة -->
+            <div class="p-8 pt-4 bg-slate-800/50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                            <h3 class="text-emerald-400 font-bold mb-1 flex items-center gap-2">
+                                📅 متى تم اكتشافه؟
+                            </h3>
+                            <p id="modal-discovery" class="text-sm text-slate-300 leading-relaxed"></p>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                            <h3 class="text-blue-400 font-bold mb-1 flex items-center gap-2">
+                                💡 أشهر الاستخدامات
+                            </h3>
+                            <p id="modal-uses" class="text-sm text-slate-300 leading-relaxed"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700 h-full">
+                            <h3 class="text-purple-400 font-bold mb-1 flex items-center gap-2">
+                                🧠 معلومة ذكية
+                            </h3>
+                            <p id="modal-fact" class="text-sm text-slate-300 leading-relaxed"></p>
+                            
+                            <hr class="border-slate-700 my-4">
+                            
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-slate-500 block text-xs">الوزن الذري</span>
+                                    <strong id="modal-mass" class="text-slate-200"></strong>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block text-xs">الحالة الفيزيائية</span>
+                                    <strong id="modal-state" class="text-slate-200"></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الكود البرمجي (JavaScript) -->
+    <script>
+        // قاعدة بيانات ذكية تحتوي على معلومات مخصصة لجميع العناصر الـ 118
+        const smartData = {
+            1: { arName: 'هيدروجين', mass: '1.008', state: 'غاز', disc: '1766م بواسطة هنري كافنديش', uses: 'وقود الصواريخ، صناعة الأمونيا والأسمدة.', fact: 'الرقم 1 في الكون! يشكل حوالي 75% من كتلة الكون المادي.' },
+            2: { arName: 'هيليوم', mass: '4.0026', state: 'غاز', disc: '1868م في الشمس أولاً', uses: 'بالونات الطقس، تبريد أجهزة الرنين المغناطيسي.', fact: 'العنصر الوحيد الذي لا يتجمد أبداً عند الضغط الجوي العادي.' },
+            3: { arName: 'ليثيوم', mass: '6.94', state: 'صلب', disc: '1817م', uses: 'بطاريات السيارات والهواتف.', fact: 'أخف معدن صلب، يطفو على الماء ويتفاعل معه بشدة.' },
+            4: { arName: 'بيريليوم', mass: '9.0122', state: 'صلب', disc: '1798م', uses: 'نوافذ أجهزة الأشعة السينية، سبائك الطيران.', fact: 'معدن سام جداً ذو طعم حلو بشكل غريب (لا يُنصح بتذوقه!).' },
+            5: { arName: 'بورون', mass: '10.81', state: 'صلب', disc: '1808م', uses: 'صناعة الزجاج المقاوم للحرارة، مطهرات.', fact: 'أساسي لنمو النباتات، ويستخدم في الألعاب النارية لإنتاج لون أخضر.' },
+            6: { arName: 'كربون', mass: '12.011', state: 'صلب', disc: 'عصور ما قبل التاريخ', uses: 'أساس الحياة العضوية، الألماس، الجرافيت.', fact: 'يمكن أن يكون أقسى مادة (ألماس) أو مادة هشة (جرافيت) حسب الترتيب الذري.' },
+            7: { arName: 'نيتروجين', mass: '14.007', state: 'غاز', disc: '1772م', uses: 'الأسمدة الزراعية، حفظ الخلايا بالتبريد.', fact: 'يشكل 78% من الهواء، وهو غاز خامل يمنع الحرائق.' },
+            8: { arName: 'أكسجين', mass: '15.999', state: 'غاز', disc: '1774م', uses: 'التنفس، دعم الاحتراق، صناعة الصلب.', fact: 'يشكل 21% من الهواء، والأكسجين النقي 100% لفترة طويلة يعتبر ساماً للإنسان.' },
+            9: { arName: 'فلور', mass: '18.998', state: 'غاز', disc: '1886م', uses: 'معجون الأسنان، صناعة التيفال.', fact: 'العنصر الأكثر نشاطاً كيميائياً؛ يتفاعل تقريباً مع كل شيء.' },
+            10: { arName: 'نيون', mass: '20.180', state: 'غاز', disc: '1898م', uses: 'اللوحات الإعلانية المضيئة.', fact: 'النيون الحقيقي يضيء باللون البرتقالي/الأحمر فقط.' },
+            11: { arName: 'صوديوم', mass: '22.990', state: 'صلب', disc: '1807م', uses: 'ملح الطعام، إنارة الشوارع.', fact: 'معدن طري يقطع بالسكين وينفجر في الماء.' },
+            12: { arName: 'ماغنيسيوم', mass: '24.305', state: 'صلب', disc: '1755م', uses: 'أجزاء السيارات الخفيفة، الألعاب النارية.', fact: 'يحترق بضوء أبيض ساطع جداً لا يمكن إطفاؤه بالماء.' },
+            13: { arName: 'ألومنيوم', mass: '26.982', state: 'صلب', disc: '1825م', uses: 'الطائرات، العلب، رقائق التغليف.', fact: 'كان في الماضي أغلى من الذهب والفضة.' },
+            14: { arName: 'سيليكون', mass: '28.085', state: 'صلب', disc: '1824م', uses: 'شرائح الكمبيوتر، الألواح الشمسية.', fact: 'العنصر الذي بنى العصر الرقمي (وادي السيليكون).' },
+            15: { arName: 'فوسفور', mass: '30.974', state: 'صلب', disc: '1669م', uses: 'الأسمدة، أعواد الثقاب.', fact: 'المكتشف استخرجه من غلي البول البشري!' },
+            16: { arName: 'كبريت', mass: '32.06', state: 'صلب', disc: 'عصور ما قبل التاريخ', uses: 'حمض الكبريتيك، البارود، الأسمدة.', fact: 'معروف قديماً باسم "حجر النار"، وله رائحة تشبه البيض الفاسد.' },
+            17: { arName: 'كلور', mass: '35.45', state: 'غاز', disc: '1774م', uses: 'تعقيم المياه، صناعة البلاستيك (PVC).', fact: 'غاز سام يتحول إلى ملح طعام عند تفاعله مع الصوديوم.' },
+            18: { arName: 'أرغون', mass: '39.95', state: 'غاز', disc: '1894م', uses: 'المصابيح المتوهجة، اللحام.', fact: 'يستخدم للحفاظ على الوثائق التاريخية من التحلل.' },
+            19: { arName: 'بوتاسيوم', mass: '39.098', state: 'صلب', disc: '1807م', uses: 'الأسمدة، بدائل الملح.', fact: 'الموز غني به، وهو عنصر يتفاعل بانفجار أرجواني مع الماء.' },
+            20: { arName: 'كالسيوم', mass: '40.078', state: 'صلب', disc: '1808م', uses: 'بناء العظام، الأسمنت.', fact: 'الكالسيوم النقي هو معدن فضي وليس أبيض كالحليب.' },
+            21: { arName: 'سكانديوم', mass: '44.956', state: 'صلب', disc: '1879م', uses: 'هياكل الدراجات، إطارات النظارات الخفيفة.', fact: 'يضاف للألومنيوم لجعله أقوى وأخف وزناً للطائرات.' },
+            22: { arName: 'تيتانيوم', mass: '47.867', state: 'صلب', disc: '1791م', uses: 'المفاصل الصناعية، الطائرات، الغواصات.', fact: 'قوي كالصلب ولكنه أخف منه بنسبة 45%.' },
+            23: { arName: 'فاناديوم', mass: '50.942', state: 'صلب', disc: '1801م', uses: 'تقوية الفولاذ لأدوات البناء والسيارات.', fact: 'يتميز بمركباته ذات الألوان الزاهية والجميلة.' },
+            24: { arName: 'كروم', mass: '51.996', state: 'صلب', disc: '1797م', uses: 'طلاء المعادن، الصلب المقاوم للصدأ (الستانلس ستيل).', fact: 'المسؤول عن اللون الأحمر اللامع في أحجار الياقوت.' },
+            25: { arName: 'منغنيز', mass: '54.938', state: 'صلب', disc: '1774م', uses: 'البطاريات الجافة، صناعة الصلب القاسي.', fact: 'أداة حيوية للحياة، بدونه تنكسر العظام بسهولة.' },
+            26: { arName: 'حديد', mass: '55.845', state: 'صلب', disc: 'العصور القديمة', uses: 'البناء، السيارات، نقل الأكسجين في الدم.', fact: 'أكثر المعادن استخداماً في تاريخ البشرية.' },
+            27: { arName: 'كوبالت', mass: '58.933', state: 'صلب', disc: '1735م', uses: 'البطاريات، السبائك المغناطيسية، صبغات الزجاج.', fact: 'يعطي الزجاج والخزف لوناً أزرقاً ساحراً وعميقاً.' },
+            28: { arName: 'نيكل', mass: '58.693', state: 'صلب', disc: '1751م', uses: 'العملات المعدنية، الطلاء، البطاريات القابلة للشحن.', fact: 'لب الأرض يحتوي على كميات هائلة من النيكل والحديد.' },
+            29: { arName: 'نحاس', mass: '63.546', state: 'صلب', disc: '9000 ق.م', uses: 'أسلاك الكهرباء، أنابيب المياه، البرونز.', fact: 'له خصائص تقضي على البكتيريا والفيروسات ذاتياً.' },
+            30: { arName: 'زنك (خارصين)', mass: '65.38', state: 'صلب', disc: 'الهند القديمة', uses: 'حماية الحديد من الصدأ (الجلفنة)، البطاريات.', fact: 'أساسي لعمل حاسة التذوق والشم في الإنسان.' },
+            31: { arName: 'غاليوم', mass: '69.723', state: 'صلب', disc: '1875م', uses: 'الإلكترونيات الدقيقة، مصابيح LED.', fact: 'معدن يذوب في راحة يدك! درجة انصهاره 29 مئوية.' },
+            32: { arName: 'جرمانيوم', mass: '72.630', state: 'صلب', disc: '1886م', uses: 'الألياف البصرية، كاميرات الرؤية الليلية.', fact: 'كان يستخدم كشريحة المعالجات الأولى قبل السيليكون.' },
+            33: { arName: 'زرنيخ', mass: '74.922', state: 'صلب', disc: 'العصور القديمة', uses: 'حفظ الأخشاب، مبيدات الآفات، أشباه الموصلات.', fact: 'اشتهر تاريخياً بكونه "سم الملوك" لصعوبة كشفه.' },
+            34: { arName: 'سيلينيوم', mass: '78.971', state: 'صلب', disc: '1817م', uses: 'آلات التصوير، الشامبو المضاد للقشرة.', fact: 'يحول الضوء إلى كهرباء، مما يجعله مثالياً للخلايا الضوئية.' },
+            35: { arName: 'بروم', mass: '79.904', state: 'سائل', disc: '1826م', uses: 'مقاومات الحرائق، تعقيم المسابح.', fact: 'أحد العنصرين الوحيدين (مع الزئبق) السائلين في درجة حرارة الغرفة.' },
+            36: { arName: 'كريبتون', mass: '83.798', state: 'غاز', disc: '1898م', uses: 'فلاش التصوير العالي، مصابيح الفلورسنت.', fact: 'ليس له علاقة بسوبرمان! هو غاز نبيل يصدر ضوءاً أبيض ناصعاً.' },
+            37: { arName: 'روبيديوم', mass: '85.468', state: 'صلب', disc: '1861م', uses: 'الساعات الذرية، الخلايا الكهروضوئية.', fact: 'يشتعل تلقائياً بمجرد تعرضه للهواء ويحترق بلون بنفسجي.' },
+            38: { arName: 'سترونتيوم', mass: '87.62', state: 'صلب', disc: '1790م', uses: 'الألعاب النارية (اللون الأحمر اللامع).', fact: 'يستخدم في النظائر المشعة لدراسة نمو العظام.' },
+            39: { arName: 'إتريوم', mass: '88.906', state: 'صلب', disc: '1794م', uses: 'أضواء الشاشات، الليزر القوي.', fact: 'اكتشف في قرية سويدية صغيرة سُمي باسمها 4 عناصر!' },
+            40: { arName: 'زركونيوم', mass: '91.224', state: 'صلب', disc: '1789م', uses: 'المفاعلات النووية، الألماس الصناعي (الزركون).', fact: 'لا يمتص النيوترونات، مما يجعله آمناً للمفاعلات النووية.' },
+            41: { arName: 'نيوبيوم', mass: '92.906', state: 'صلب', disc: '1801م', uses: 'مغانط أجهزة الرنين المغناطيسي، خطوط الأنابيب.', fact: 'يعزز قوة الصلب بدرجة كبيرة حتى لو أضيف بكميات ضئيلة.' },
+            42: { arName: 'موليبدينوم', mass: '95.95', state: 'صلب', disc: '1778م', uses: 'دروع الدبابات، أجزاء الطائرات.', fact: 'يتحمل درجات حرارة عالية جداً دون أن يتمدد أو يلين.' },
+            43: { arName: 'تكنيتيوم', mass: '98', state: 'صلب', disc: '1937م', uses: 'التصوير الطبي الإشعاعي وتشخيص الأمراض.', fact: 'أول عنصر يتم إنتاجه صناعياً (لم يوجد في الطبيعة إلا نادراً).' },
+            44: { arName: 'روثينيوم', mass: '101.07', state: 'صلب', disc: '1844م', uses: 'طلاء المجوهرات والموصلات الإلكترونية المقاومة للتآكل.', fact: 'يُستخدم في أطراف أقلام الحبر السائل الفاخرة.' },
+            45: { arName: 'روديوم', mass: '102.91', state: 'صلب', disc: '1803م', uses: 'فلاتر عوادم السيارات لتقليل التلوث، المجوهرات.', fact: 'أغلى من الذهب والبلاتين بأضعاف كثيرة!' },
+            46: { arName: 'بالاديوم', mass: '106.42', state: 'صلب', disc: '1803م', uses: 'المحولات الحفازة بالسيارات، تنقية الهيدروجين.', fact: 'يستطيع امتصاص 900 ضعف حجمه من غاز الهيدروجين.' },
+            47: { arName: 'فضة', mass: '107.87', state: 'صلب', disc: 'العصور القديمة', uses: 'المجوهرات، الطب، المرايا، الألواح الشمسية.', fact: 'أفضل عنصر لتوصيل الحرارة والكهرباء على الإطلاق.' },
+            48: { arName: 'كادميوم', mass: '112.41', state: 'صلب', disc: '1817م', uses: 'البطاريات القابلة للشحن (قديماً)، أصباغ الطلاء.', fact: 'سام جداً، وكان يستخدم في أصباغ اللوحات الصفراء.' },
+            49: { arName: 'إنديوم', mass: '114.82', state: 'صلب', disc: '1863م', uses: 'شاشات اللمس والهواتف الذكية (أكسيد قصدير الإنديوم).', fact: 'عندما يُثنى هذا المعدن، يصدر صوتاً يشبه "صراخاً" عالياً!' },
+            50: { arName: 'قصدير', mass: '118.71', state: 'صلب', disc: 'العصور القديمة', uses: 'اللحام الكهربائي، تغليف العلب لمنع الصدأ.', fact: 'استُخدم مع النحاس لصنع البرونز، مما أطلق "العصر البرونزي".' },
+            51: { arName: 'إثمد (أنتيموان)', mass: '121.76', state: 'صلب', disc: 'العصور القديمة', uses: 'بطاريات الرصاص الحمضية، مواد إطفاء الحرائق.', fact: 'استخدمه الفراعنة القدماء كمستحضر تجميل للعيون (الكحل).' },
+            52: { arName: 'تيلوريوم', mass: '127.60', state: 'صلب', disc: '1782م', uses: 'تحسين خصائص النحاس والصلب، الألواح الشمسية.', fact: 'التعرض البسيط له يجعل رائحة عرقك تشبه الثوم المتعفن لأشهر!' },
+            53: { arName: 'يود', mass: '126.90', state: 'صلب', disc: '1811م', uses: 'تطهير الجروح، تصوير الغدة الدرقية الطبية.', fact: 'عند تسخينه يتسامى (يتحول من صلب لغاز مباشرة) مطلقا سحابة بنفسجية ساحرة.' },
+            54: { arName: 'زينون', mass: '131.29', state: 'غاز', disc: '1898م', uses: 'مصابيح السيارات الأمامية عالية السطوع، ومحركات الدفع الأيوني للفضاء.', fact: 'يمكن استخدامه كمخدر طبي عام في العمليات الجراحية.' },
+            55: { arName: 'سيزيوم', mass: '132.91', state: 'صلب', disc: '1860م', uses: 'الساعات الذرية بالغة الدقة التي نعتمد عليها في نظام الـ GPS.', fact: 'الذرة الواحدة منه تحدد طول الثانية الرسمية في العالم.' },
+            56: { arName: 'باريوم', mass: '137.33', state: 'صلب', disc: '1808م', uses: 'تصوير الجهاز الهضمي بالأشعة السينية، الألعاب النارية الخضراء.', fact: 'يتأكسد في الهواء بسرعة ويجب حفظه تحت الزيت.' },
+            57: { arName: 'لانثانوم', mass: '138.91', state: 'صلب', disc: '1839م', uses: 'عدسات الكاميرات العالية الجودة لتصحيح تشوه الألوان.', fact: 'رغم اسمه (المختبئ)، هو أول عناصر سلسلة اللانثانيدات الشهيرة.' },
+            58: { arName: 'سيريوم', mass: '140.12', state: 'صلب', disc: '1803م', uses: 'أحجار القداحات، تلميع زجاج الشاشات، أفران التنظيف الذاتي.', fact: 'أكثر اللانثانيدات وفرة، ويشتعل عند خدشه.' },
+            59: { arName: 'براسوديميوم', mass: '140.91', state: 'صلب', disc: '1885م', uses: 'نظارات اللحام الملونة، ومغانط الطيران القوية.', fact: 'اسمه يعني "التوأم الأخضر" باليونانية بسبب أملاحه الخضراء.' },
+            60: { arName: 'نيوديميوم', mass: '144.24', state: 'صلب', disc: '1885م', uses: 'أقوى المغانط الدائمة المستخدمة في محركات السيارات الكهربائية والسماعات.', fact: 'بدون هذا العنصر، لن تكون الهواتف وسماعات الأذن صغيرة وقوية.' },
+            61: { arName: 'بروميثيوم', mass: '145', state: 'صلب', disc: '1945م', uses: 'بطاريات نووية دقيقة لأجهزة تنظيم ضربات القلب والأقمار الصناعية.', fact: 'العنصر المشع الوحيد وسط سلسلة اللانثانيدات المستقرة.' },
+            62: { arName: 'ساماريوم', mass: '150.36', state: 'صلب', disc: '1879م', uses: 'المغانط التي تعمل في درجات حرارة عالية، أدوية سرطان العظام.', fact: 'أول عنصر يُسمى تيمناً بشخص حقيقي (عامل مناجم روسي).' },
+            63: { arName: 'يوروبيوم', mass: '151.96', state: 'صلب', disc: '1901م', uses: 'الفوسفور الأحمر والأزرق في شاشات التلفزيون والأوراق النقدية.', fact: 'يُستخدم كوسيلة أمنية لمنع تزوير العملات الورقية مثل اليورو.' },
+            64: { arName: 'غادولينيوم', mass: '157.25', state: 'صلب', disc: '1880م', uses: 'مادة التباين في حقن التصوير بالرنين المغناطيسي (MRI).', fact: 'له خصائص مغناطيسية قوية جداً لكنه يصبح غير مغناطيسي عند تدفئته.' },
+            65: { arName: 'تيربيوم', mass: '158.93', state: 'صلب', disc: '1843م', uses: 'مكبرات الصوت الخزفية، أجهزة الاستشعار البحرية (السونار).', fact: 'ينمو ويتمدد عند وضعه في مجال مغناطيسي!' },
+            66: { arName: 'ديسبروسيوم', mass: '162.50', state: 'صلب', disc: '1886م', uses: 'أقراص التخزين الصلبة، قضبان التحكم في المفاعلات النووية.', fact: 'اسمه باليونانية يعني "الذي يصعب الوصول إليه".' },
+            67: { arName: 'هولميوم', mass: '164.93', state: 'صلب', disc: '1878م', uses: 'أجهزة الليزر الجراحية الآمنة لعمليات العيون والأسنان.', fact: 'يمتلك أقوى عزم مغناطيسي بين جميع العناصر الطبيعية.' },
+            68: { arName: 'إربيوم', mass: '167.26', state: 'صلب', disc: '1843م', uses: 'تضخيم إشارات الإنترنت في كابلات الألياف الضوئية البحرية.', fact: 'بدونه، لا يمكن نقل الإنترنت العالي السرعة عبر القارات.' },
+            69: { arName: 'ثوليوم', mass: '168.93', state: 'صلب', disc: '1879م', uses: 'أجهزة الأشعة السينية المحمولة الصغيرة ومعدات الجراحة بالليزر.', fact: 'أندر عناصر سلسلة اللانثانيدات المتوفرة في الطبيعة.' },
+            70: { arName: 'إيتربيوم', mass: '173.05', state: 'صلب', disc: '1878م', uses: 'ساعات ذرية عالية الدقة، وأشعة الليزر الصناعية.', fact: 'يتغير سلوكه الكهروضوئي تحت الضغط الشديد.' },
+            71: { arName: 'لوتيشيوم', mass: '174.97', state: 'صلب', disc: '1907م', uses: 'محفز في تكرير النفط والبترول.', fact: 'أغلى عنصر في اللانثانيدات نظراً لصعوبة فصله البالغة.' },
+            72: { arName: 'هافنيوم', mass: '178.49', state: 'صلب', disc: '1923م', uses: 'معالجات الحواسيب الدقيقة والمفاعلات النووية بالغواصات.', fact: 'اكتشف متأخراً لشدة تشابهه مع عنصر الزركونيوم الملتصق به.' },
+            73: { arName: 'تانتالوم', mass: '180.95', state: 'صلب', disc: '1802م', uses: 'المكثفات في جميع الهواتف الذكية والأجهزة اللوحية، الغرسات الطبية.', fact: 'مقاوم للغاية لأحماض الجسم ولا يرفضه الجهاز المناعي.' },
+            74: { arName: 'تنجستن', mass: '183.84', state: 'صلب', disc: '1783م', uses: 'شعيرات المصابيح القديمة، أدوات القطع الصناعية، أوزان التوازن.', fact: 'يملك أعلى درجة انصهار بين كل المعادن (3422 مئوية).' },
+            75: { arName: 'رينيوم', mass: '186.21', state: 'صلب', disc: '1925م', uses: 'محركات الطائرات النفاثة التي تعمل في حرارة قصوى، المحفزات الكيميائية.', fact: 'آخر عنصر مستقر غير مشع تم اكتشافه في الطبيعة.' },
+            76: { arName: 'أوزميوم', mass: '190.23', state: 'صلب', disc: '1803م', uses: 'سنون الأقلام العالية الجودة، البوصلات الدقيقة.', fact: 'العنصر الأكثر كثافة (ثقلاً) في الطبيعة، أثقل من الرصاص بمرتين!' },
+            77: { arName: 'إيريديوم', mass: '192.22', state: 'صلب', disc: '1803م', uses: 'شمعات الاحتراق (بواجي) السيارات المتطورة، الأقمار الصناعية.', fact: 'وجوده بكثرة في طبقات الأرض يعود لنيزك الديناصورات.' },
+            78: { arName: 'بلاتين', mass: '195.08', state: 'صلب', disc: '1735م', uses: 'المجوهرات، المحولات الحفازة بالسيارات، أدوية السرطان.', fact: 'معدن نبيل لا يصدأ أبداً وكان يُعتبر قديماً "فضة فاسدة" في كولومبيا.' },
+            79: { arName: 'ذهب', mass: '196.97', state: 'صلب', disc: 'العصور القديمة', uses: 'المجوهرات، الغطاء النقدي، وصلات الأقمار الصناعية.', fact: 'عنصر قابل للطرق لدرجة أن جراماً واحداً يمكن مده لسلك طوله كيلومترين!' },
+            80: { arName: 'زئبق', mass: '200.59', state: 'سائل', disc: 'العصور القديمة', uses: 'مقاييس الحرارة القديمة، المصابيح الفلورية.', fact: 'المعدن الوحيد السائل في درجة حرارة الغرفة.' },
+            81: { arName: 'ثاليوم', mass: '204.38', state: 'صلب', disc: '1861م', uses: 'عدسات الأشعة تحت الحمراء، التصوير الطبي للقلب.', fact: 'كان يُسمى "سم المُسمِّمين" لعدم وجود طعم أو لون أو رائحة له.' },
+            82: { arName: 'رصاص', mass: '207.2', state: 'صلب', disc: 'العصور القديمة', uses: 'بطاريات السيارات، دروع الحماية من أشعة X (الرونتجن).', fact: 'معدن ثقيل جداً وسام، استخدمه الرومان قديماً في أنابيب المياه.' },
+            83: { arName: 'بزموت', mass: '208.98', state: 'صلب', disc: '1753م', uses: 'أدوية اضطراب المعدة (Pepto-Bismol)، كواشف الحرائق.', fact: 'يشكل بلورات قوس قزحية هندسية مذهلة عند تبريده ببطء.' },
+            84: { arName: 'بولونيوم', mass: '209', state: 'صلب', disc: '1898م بواسطة ماري كوري', uses: 'مضاد للكهرباء الساكنة في الصناعة الدقيقة، مصدر حراري بالأقمار.', fact: 'سمي تيمناً بـ "بولندا" موطن العالمة ماري كوري، وهو مشع بشدة.' },
+            85: { arName: 'أستاتين', mass: '210', state: 'صلب', disc: '1940م', uses: 'تجارب علاج السرطان الإشعاعي الموجه.', fact: 'أندر عنصر طبيعي على الأرض، يُقدر الموجود منه عالمياً بأقل من 30 جراماً!' },
+            86: { arName: 'رادون', mass: '222', state: 'غاز', disc: '1900م', uses: 'التنبؤ بالزلازل، علاج بعض الأورام (قديماً).', fact: 'غاز مشع ثقيل يتراكم في سراديب المنازل ويعتبر ملوثاً طبيعياً.' },
+            87: { arName: 'فرانسيوم', mass: '223', state: 'صلب', disc: '1939م', uses: 'مقتصر على الأبحاث العلمية المتقدمة.', fact: 'مشع وسريع التحلل لدرجة أنه لم تُجمع منه عينة مرئية بالعين المجردة قط.' },
+            88: { arName: 'راديوم', mass: '226', state: 'صلب', disc: '1898م بواسطة ماري كوري', uses: 'دهانات مضيئة للساعات قديماً، وعلاج السرطان.', fact: 'كان يضاف لمعاجين الأسنان والمياه قديماً كـ "علاج سحري" قبل معرفة خطره الإشعاعي!' },
+            89: { arName: 'أكتينيوم', mass: '227', state: 'صلب', disc: '1899م', uses: 'علاجات إشعاعية مستهدفة للأورام.', fact: 'يضيء في الظلام بوهج أزرق خافت بسبب نشاطه الإشعاعي الشديد.' },
+            90: { arName: 'ثوريوم', mass: '232.04', state: 'صلب', disc: '1828م', uses: 'عدسات الكاميرات العالية الجودة، وقود نووي مستقبلي آمن.', fact: 'يعتبر بديلاً أكثر أماناً ونظافة لليورانيوم في المحطات النووية.' },
+            91: { arName: 'بروتكتينيوم', mass: '231.04', state: 'صلب', disc: '1913م', uses: 'مجال الأبحاث العلمية وتأريخ الرواسب البحرية.', fact: 'يعد من أندر وأغلى العناصر الطبيعية المشعة.' },
+            92: { arName: 'يورانيوم', mass: '238.03', state: 'صلب', disc: '1789م', uses: 'وقود المحطات النووية لتوليد الكهرباء، الغواصات.', fact: 'جرام واحد منه يحتوي طاقة تعادل حرق 3 أطنان من الفحم.' },
+            93: { arName: 'نبتونيوم', mass: '237', state: 'صلب', disc: '1940م', uses: 'كواشف النيوترونات، وتصنيع البلوتونيوم.', fact: 'أول عنصر يتم إنتاجه صناعياً من بعد اليورانيوم وسمي على كوكب نبتون.' },
+            94: { arName: 'بلوتونيوم', mass: '244', state: 'صلب', disc: '1940م', uses: 'بطاريات مركبات الفضاء الاستكشافية، الأسلحة النووية.', fact: 'وفر طاقة حرارية وكهربائية لمركبة "كيوريوسيتي" على المريخ.' },
+            95: { arName: 'أمريسيوم', mass: '243', state: 'صلب', disc: '1944م', uses: 'أجهزة كشف الدخان المنزلية.', fact: 'رغم أنه مشع، إلا أن الكمية الدقيقة منه في كواشف الدخان تنقذ آلاف الأرواح سنوياً.' },
+            96: { arName: 'كوريوم', mass: '247', state: 'صلب', disc: '1944م', uses: 'أجهزة التحليل الطيفي بمركبات المريخ (لتحليل صخور الكوكب).', fact: 'سمي تيمناً بالزوجين "كوري" رواد الإشعاع.' },
+            97: { arName: 'بيركليوم', mass: '247', state: 'صلب', disc: '1949م', uses: 'لتصنيع عناصر أثقل في المسرعات.', fact: 'سمي على اسم جامعة بيركلي بكاليفورنيا حيث اكتُشف.' },
+            98: { arName: 'كاليفورنيوم', mass: '251', state: 'صلب', disc: '1950م', uses: 'كاشف عن الذهب والفضة في الخامات، اكتشاف المياه الجوفية.', fact: 'باهظ الثمن جداً! تكلفة الجرام الواحد تقارب 27 مليون دولار.' },
+            99: { arName: 'أينشتاينيوم', mass: '252', state: 'صلب', disc: '1952م', uses: 'أبحاث علمية خالصة.', fact: 'تم اكتشافه لأول مرة في الحطام الإشعاعي لأول قنبلة هيدروجينية.' },
+            100: { arName: 'فيرميوم', mass: '257', state: 'صلب', disc: '1952م', uses: 'أبحاث علمية.', fact: 'أثقل عنصر يمكن تصنيعه عن طريق قذف عناصر أخرى بالنيوترونات فقط.' },
+            101: { arName: 'مندليفيوم', mass: '258', state: 'صلب', disc: '1955م', uses: 'دراسة الخصائص النووية.', fact: 'سمي تيمناً بـ "ديمتري مندليف" مبتكر الجدول الدوري الأول.' },
+            102: { arName: 'نوبليوم', mass: '259', state: 'صلب', disc: '1966م', uses: 'أبحاث علمية.', fact: 'سمي تيمناً بألفريد نوبل، مخترع الديناميت ومؤسس جوائز نوبل.' },
+            103: { arName: 'لورنسيوم', mass: '266', state: 'صلب', disc: '1961م', uses: 'أبحاث علمية.', fact: 'عنصر مصنع شديد الإشعاع ويدوم لثوانٍ معدودة.' },
+            104: { arName: 'رذرفورديوم', mass: '267', state: 'صلب', disc: '1964م', uses: 'أبحاث علمية في مسرعات الجسيمات.', fact: 'نشأ خلاف كبير بين روسيا وأمريكا حول من اكتشفه ومن يحق له تسميته.' },
+            105: { arName: 'دوبنيوم', mass: '268', state: 'صلب', disc: '1967م', uses: 'أبحاث علمية متقدمة.', fact: 'سمي على مدينة "دوبنا" الروسية التي يوجد بها مركز أبحاث نووية.' },
+            106: { arName: 'سيبورغيوم', mass: '269', state: 'صلب', disc: '1974م', uses: 'أبحاث علمية.', fact: 'أول عنصر يُسمى تيمناً بعالم كان لا يزال على قيد الحياة (غلين سيبورغ).' },
+            107: { arName: 'بوريوم', mass: '270', state: 'صلب', disc: '1981م', uses: 'أبحاث علمية.', fact: 'سمي تيمناً بالفيزيائي الشهير نيلز بور لمعرفته بتركيب الذرة.' },
+            108: { arName: 'هاسيوم', mass: '277', state: 'صلب', disc: '1984م', uses: 'أبحاث علمية.', fact: 'من المفترض أن يكون أثقل عنصر شبيه بالأوزميوم.' },
+            109: { arName: 'مايتنريوم', mass: '278', state: 'صلب', disc: '1982م', uses: 'أبحاث علمية.', fact: 'سمي على اسم العالمة النمساوية ليز مايتنر، رائدة الانشطار النووي.' },
+            110: { arName: 'دارمشتاتيوم', mass: '281', state: 'صلب', disc: '1994م', uses: 'أبحاث فيزياء الكم الجسيمية.', fact: 'تم تصنيع ذرة واحدة منه لأول مرة باصطدام النيكل مع الرصاص.' },
+            111: { arName: 'رونتجينيوم', mass: '282', state: 'صلب', disc: '1994م', uses: 'أبحاث فيزياء الجسيمات.', fact: 'سمي تيمناً بمكتشف الأشعة السينية، رونتجن.' },
+            112: { arName: 'كوبرنيسيوم', mass: '285', state: 'صلب / غاز (نظرياً)', disc: '1996م', uses: 'أبحاث علمية بحتة.', fact: 'سمي تيمناً بالعالم كوبرنيكوس، ويُعتقد أنه شديد التطاير.' },
+            113: { arName: 'نيهونيوم', mass: '286', state: 'صلب', disc: '2003م', uses: 'أبحاث الفيزياء النووية.', fact: 'أول عنصر يُكتشف ويُسمى في قارة آسيا (كلمة نيهون تعني اليابان).' },
+            114: { arName: 'فليروفيوم', mass: '289', state: 'صلب / غاز (نظرياً)', disc: '1999م', uses: 'استكشاف "جزيرة الاستقرار" النووية.', fact: 'يأمل العلماء أن يجدوا نظائر مستقرة له تعيش لسنوات بدلاً من أجزاء من الثانية.' },
+            115: { arName: 'موسكوفيوم', mass: '290', state: 'صلب', disc: '2003م', uses: 'أبحاث اصطدام الجسيمات.', fact: 'عنصر فائق الثقل تحلل فوراً بعد اكتشافه، وسمي على العاصمة الروسية.' },
+            116: { arName: 'ليفرموريوم', mass: '293', state: 'صلب', disc: '2000م', uses: 'أبحاث التفاعلات النووية.', fact: 'سمي تيمناً بمختبرات لورانس ليفرمور الوطنية في أمريكا.' },
+            117: { arName: 'تينيسين', mass: '294', state: 'صلب', disc: '2010م', uses: 'فهم القوى النووية الأساسية.', fact: 'أثقل عضو في مجموعة الهالوجينات.' },
+            118: { arName: 'أوغانيسون', mass: '294', state: 'صلب/غاز', disc: '2002م', uses: 'أبحاث استكشاف حافة الجدول الدوري.', fact: 'أثقل عنصر معروف للبشرية حتى الآن، وسمي تيمناً بالعالم الحي يوري أوغانيسيان.' }
+        };
+
+        // أسماء الفئات بالعربية
+        const categoryNames = {
+            'alkali-metal': 'فلزات قلوية',
+            'alkaline-earth': 'فلزات قلوية ترابية',
+            'transition-metal': 'فلزات انتقالية',
+            'post-transition': 'فلزات بعد انتقالية',
+            'metalloid': 'أشباه الفلزات',
+            'nonmetal': 'لا فلزات',
+            'halogen': 'هالوجينات',
+            'noble-gas': 'غازات نبيلة',
+            'lanthanide': 'لانثانيدات',
+            'actinide': 'أكتينيدات',
+            'unknown': 'خصائص غير معروفة'
+        };
+
+        // دالة لتوليد معلومات العناصر الباقية برمجياً
+        function getElementData(num) {
+            // معلومات ثابتة للرمز والاسم الإنجليزي للحسابات
+            const elementsBase = [
+                "H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca",
+                "Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
+                "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd",
+                "Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg",
+                "Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm",
+                "Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"
+            ];
+            
+            const symbol = elementsBase[num - 1];
+            
+            // تحديد الفئة بناءً على الرقم الذري (بناء خوارزمي للجدول)
+            let cat = 'unknown';
+            if ([1, 6, 7, 8, 15, 16, 34].includes(num)) cat = 'nonmetal';
+            else if ([2, 10, 18, 36, 54, 86, 118].includes(num)) cat = 'noble-gas';
+            else if ([3, 11, 19, 37, 55, 87].includes(num)) cat = 'alkali-metal';
+            else if ([4, 12, 20, 38, 56, 88].includes(num)) cat = 'alkaline-earth';
+            else if ([5, 14, 32, 33, 51, 52, 84].includes(num)) cat = 'metalloid';
+            else if ([9, 17, 35, 53, 85, 117].includes(num)) cat = 'halogen';
+            else if ([13, 31, 49, 50, 81, 82, 83, 113, 114, 115, 116].includes(num)) cat = 'post-transition';
+            else if ((num >= 57 && num <= 71)) cat = 'lanthanide';
+            else if ((num >= 89 && num <= 103)) cat = 'actinide';
+            else if ((num >= 21 && num <= 30) || (num >= 39 && num <= 48) || (num >= 72 && num <= 80) || (num >= 104 && num <= 112)) cat = 'transition-metal';
+
+            // تحديد الموقع (الصف والعمود) في شبكة CSS
+            let row = 1, col = 1;
+            if (num === 1) { row = 1; col = 1; }
+            else if (num === 2) { row = 1; col = 18; }
+            else if (num >= 3 && num <= 10) { row = 2; col = num <= 4 ? num - 2 : num + 8; }
+            else if (num >= 11 && num <= 18) { row = 3; col = num <= 12 ? num - 10 : num; }
+            else if (num >= 19 && num <= 36) { row = 4; col = num - 18; }
+            else if (num >= 37 && num <= 54) { row = 5; col = num - 36; }
+            else if (num >= 55 && num <= 86) {
+                if (num <= 56) { row = 6; col = num - 54; }
+                else if (num >= 57 && num <= 71) { row = 9; col = num - 53; } // Lanthanides
+                else { row = 6; col = num - 68; }
+            }
+            else if (num >= 87 && num <= 118) {
+                if (num <= 88) { row = 7; col = num - 86; }
+                else if (num >= 89 && num <= 103) { row = 10; col = num - 85; } // Actinides
+                else { row = 7; col = num - 100; }
+            }
+
+            // تحديد حالة المادة الأساسية للفلترة (في درجة حرارة الغرفة)
+            let baseState = 'solid'; // الافتراضي صلب
+            const liquids = [35, 80]; // البروم والزئبق
+            const gases = [1, 2, 7, 8, 9, 10, 17, 18, 36, 54, 86]; // الغازات
+            if (liquids.includes(num)) baseState = 'liquid';
+            else if (gases.includes(num)) baseState = 'gas';
+
+            // إذا كان له بيانات ذكية استخدمها، وإلا بيانات افتراضية
+            const sData = smartData[num] || {
+                arName: 'عنصر ' + symbol,
+                cat: cat,
+                mass: 'غير محدد بدقة',
+                state: (num >= 104) ? 'مُصنّع مخبرياً' : 'صلب (في الغالب)',
+                disc: 'تم اكتشافه خلال الأبحاث العلمية المتقدمة',
+                uses: (num > 92) ? 'يستخدم بشكل رئيسي في الأبحاث العلمية المتقدمة ودراسة الفيزياء النووية.' : 'يدخل في العديد من التفاعلات الكيميائية والصناعات الدقيقة.',
+                fact: 'كل عنصر في الجدول الدوري يحمل بصمة طيفية فريدة تميزه عن غيره في الكون.'
+            };
+
+            // دمج البيانات
+            return {
+                num, symbol, row, col,
+                name: sData.arName,
+                cat: sData.cat || cat,
+                mass: sData.mass,
+                state: sData.state,
+                baseState: baseState,
+                disc: sData.disc,
+                uses: sData.uses,
+                fact: sData.fact
+            };
+        }
+
+        // بناء الجدول الدوري
+        const tableContainer = document.getElementById('periodic-table');
+        const elementsDataArray = [];
+
+        // إنشاء 118 عنصر
+        for (let i = 1; i <= 118; i++) {
+            const data = getElementData(i);
+            elementsDataArray.push(data);
+
+            const elBox = document.createElement('div');
+            elBox.className = `element-box ${data.cat}`;
+            elBox.dir = 'rtl'; // لضمان عرض النصوص العربية بداخل المربع بشكل سليم
+            elBox.dataset.state = data.baseState; // إضافة حالة المادة للفلترة
+            elBox.style.gridRow = data.row;
+            elBox.style.gridColumn = data.col;
+            
+            // إضافة مسافة للصفوف المنفصلة (اللانثانيدات والأكتينيدات)
+            if (data.row === 9) elBox.style.marginTop = '20px';
+
+            elBox.innerHTML = `
+                <span class="el-number">${data.num}</span>
+                <span class="el-symbol">${data.symbol}</span>
+                <span class="el-name">${data.name}</span>
+            `;
+
+            // إضافة حدث النقر لفتح النافذة
+            elBox.addEventListener('click', () => openModal(data));
+            
+            tableContainer.appendChild(elBox);
+        }
+
+        // دوال النافذة المنبثقة
+        const modalOverlay = document.getElementById('modal-overlay');
+
+        function openModal(data) {
+            // تعبئة البيانات
+            document.getElementById('modal-number').innerText = data.num;
+            document.getElementById('modal-symbol').innerText = data.symbol;
+            document.getElementById('modal-name').innerText = data.name;
+            document.getElementById('modal-category').innerText = categoryNames[data.cat];
+            
+            document.getElementById('modal-discovery').innerText = data.disc;
+            document.getElementById('modal-uses').innerText = data.uses;
+            document.getElementById('modal-fact').innerText = data.fact;
+            
+            document.getElementById('modal-mass').innerText = data.mass;
+            document.getElementById('modal-state').innerText = data.state;
+
+            // تغيير لون رأس النافذة بناء على الفئة
+            const symbolBox = document.getElementById('modal-symbol-box');
+            symbolBox.className = `w-24 h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative ${data.cat}`;
+
+            // إظهار النافذة
+            modalOverlay.classList.remove('hidden');
+            // تأخير بسيط لتفعيل الأنيميشن
+            setTimeout(() => {
+                modalOverlay.classList.add('active');
+                modalOverlay.style.opacity = '1';
+            }, 10);
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            modalOverlay.style.opacity = '0';
+            setTimeout(() => {
+                modalOverlay.classList.add('hidden');
+            }, 300); // نفس مدة الـ transition في CSS
+        }
+
+        // إغلاق النافذة عند النقر خارجها
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        // إغلاق النافذة عند الضغط على زر Esc
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !modalOverlay.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
+        // فلاتر حالة المادة
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-slate-700', 'text-white', 'shadow-md');
+                    b.classList.add('bg-slate-800', 'text-slate-400');
+                });
+                btn.classList.remove('bg-slate-800', 'text-slate-400');
+                btn.classList.add('bg-slate-700', 'text-white', 'shadow-md');
+
+                const selectedFilter = btn.dataset.filter;
+                const allElements = document.querySelectorAll('.element-box');
+
+                allElements.forEach(el => {
+                    if (selectedFilter === 'all' || el.dataset.state === selectedFilter) {
+                        el.classList.remove('dimmed');
+                    } else {
+                        el.classList.add('dimmed');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
