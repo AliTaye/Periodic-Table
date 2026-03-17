@@ -55,7 +55,7 @@
             filter: brightness(1.2);
         }
 
-        /* فئة التعتيم عند استخدام الفلتر */
+        /* فئة التعتيم عند استخدام الفلتر أو البحث */
         .element-box.dimmed {
             opacity: 0.15;
             filter: grayscale(80%);
@@ -78,6 +78,7 @@
             font-weight: 900;
             line-height: 1;
             margin-top: 16px; /* زيادة المسافة العلوية لدفعه للأسفل بعيداً عن الرقم */
+            transition: opacity 0.3s ease;
         }
 
         .el-name {
@@ -88,6 +89,35 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            transition: opacity 0.3s ease;
+        }
+
+        /* تنسيقات وضع التحدي (Quiz Mode) */
+        .quiz-active .el-symbol,
+        .quiz-active .el-name {
+            opacity: 0 !important; /* إخفاء الرمز والاسم أثناء التحدي */
+        }
+        
+        .correct-flash {
+            animation: flashGreen 0.6s ease;
+            z-index: 20 !important;
+        }
+        
+        .wrong-flash {
+            animation: flashRed 0.4s ease;
+            z-index: 20 !important;
+        }
+
+        @keyframes flashGreen {
+            0%, 100% { transform: scale(1); filter: brightness(1); box-shadow: none; }
+            50% { transform: scale(1.2); filter: brightness(1.5); box-shadow: 0 0 30px 10px rgba(34, 197, 94, 0.8); background-color: #22c55e; }
+        }
+
+        @keyframes flashRed {
+            0%, 100% { transform: scale(1) translateX(0); filter: brightness(1); box-shadow: none; }
+            25% { transform: scale(1.1) translateX(-5px); background-color: #ef4444; }
+            50% { transform: scale(1.1) translateX(5px); filter: brightness(1.5); box-shadow: 0 0 30px 10px rgba(239, 68, 68, 0.8); background-color: #ef4444; }
+            75% { transform: scale(1.1) translateX(-5px); background-color: #ef4444; }
         }
 
         /* ألوان الفئات الكيميائية */
@@ -141,30 +171,55 @@
 <body class="min-h-screen flex flex-col">
 
     <!-- الرأس -->
-    <header class="text-center py-8 bg-slate-800 border-b border-slate-700 shadow-lg">
+    <header class="text-center py-8 bg-slate-800 border-b border-slate-700 shadow-lg relative z-20">
         <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-emerald-400 mb-2 py-4 leading-relaxed">
             الجدول الدوري التفاعلي
         </h1>
         <p class="text-slate-400 text-sm md:text-base">انقر على أي عنصر لاستكشاف خصائصه، تاريخ اكتشافه، وأبرز استخداماته في حياتنا.</p>
     </header>
 
-    <!-- مفتاح الألوان (Legend) -->
-    <div class="max-w-6xl mx-auto px-4 mt-8 w-full">
-        <div class="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold mb-6">
-            <span class="px-3 py-1 rounded-full bg-blue-600 text-white">لا فلزات</span>
-            <span class="px-3 py-1 rounded-full bg-red-600 text-white">فلزات قلوية</span>
-            <span class="px-3 py-1 rounded-full bg-orange-600 text-white">قلوية ترابية</span>
-            <span class="px-3 py-1 rounded-full bg-yellow-600 text-white">فلزات انتقالية</span>
-            <span class="px-3 py-1 rounded-full bg-green-600 text-white">بعد انتقالية</span>
-            <span class="px-3 py-1 rounded-full bg-teal-600 text-white">أشباه الفلزات</span>
-            <span class="px-3 py-1 rounded-full bg-purple-600 text-white">هالوجينات</span>
-            <span class="px-3 py-1 rounded-full bg-pink-600 text-white">غازات نبيلة</span>
-            <span class="px-3 py-1 rounded-full bg-stone-500 text-white">لانثانيدات</span>
-            <span class="px-3 py-1 rounded-full bg-stone-700 text-white">أكتينيدات</span>
+    <!-- أدوات التحكم والبحث والتحدي -->
+    <div class="max-w-6xl mx-auto px-4 mt-8 w-full flex flex-col items-center gap-6">
+        
+        <!-- شريط البحث ووضع التحدي -->
+        <div class="flex flex-col md:flex-row gap-4 w-full justify-center items-center max-w-3xl">
+            <!-- شريط البحث -->
+            <div class="relative w-full">
+                <input type="text" id="search-input" placeholder="ابحث بالاسم (حديد)، الرمز (Fe)، أو الرقم الذري (26)..." class="w-full bg-slate-800 border border-slate-600 text-white px-10 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm shadow-inner disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="w-5 h-5 absolute right-3 top-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            
+            <!-- زر التحدي -->
+            <button id="quiz-toggle" class="whitespace-nowrap bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 min-w-[160px]">
+                <span>🎮 وضع التحدي</span>
+            </button>
+        </div>
+
+        <!-- لوحة عرض سؤال التحدي (مخفية افتراضياً) -->
+        <div id="quiz-panel" class="hidden w-full max-w-2xl bg-indigo-900/40 border border-indigo-500/30 p-5 rounded-2xl text-center shadow-lg transform transition-all">
+            <p class="text-indigo-300 text-sm font-bold mb-2 tracking-wide">🎯 سؤال التحدي الحالي:</p>
+            <h3 id="quiz-question" class="text-2xl md:text-3xl font-black text-white drop-shadow-md">أين يقع عنصر ...؟</h3>
+            <p id="quiz-feedback" class="text-sm font-bold mt-3 h-5 text-emerald-400 transition-colors"></p>
+        </div>
+
+        <!-- مفتاح الألوان (Legend) -->
+        <div class="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold">
+            <span class="px-3 py-1 rounded-full bg-blue-600 text-white shadow">لا فلزات</span>
+            <span class="px-3 py-1 rounded-full bg-red-600 text-white shadow">فلزات قلوية</span>
+            <span class="px-3 py-1 rounded-full bg-orange-600 text-white shadow">قلوية ترابية</span>
+            <span class="px-3 py-1 rounded-full bg-yellow-600 text-white shadow">فلزات انتقالية</span>
+            <span class="px-3 py-1 rounded-full bg-green-600 text-white shadow">بعد انتقالية</span>
+            <span class="px-3 py-1 rounded-full bg-teal-600 text-white shadow">أشباه الفلزات</span>
+            <span class="px-3 py-1 rounded-full bg-purple-600 text-white shadow">هالوجينات</span>
+            <span class="px-3 py-1 rounded-full bg-pink-600 text-white shadow">غازات نبيلة</span>
+            <span class="px-3 py-1 rounded-full bg-stone-500 text-white shadow">لانثانيدات</span>
+            <span class="px-3 py-1 rounded-full bg-stone-700 text-white shadow">أكتينيدات</span>
         </div>
 
         <!-- فلتر حالات المادة -->
-        <div class="flex justify-center gap-3 text-sm">
+        <div class="flex justify-center gap-3 text-sm mt-2" id="state-filters">
             <button class="filter-btn px-6 py-2 rounded-lg bg-slate-700 text-white font-bold transition-all shadow-md" data-filter="all">الكل</button>
             <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="solid">صلب</button>
             <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="liquid">سائل</button>
@@ -173,16 +228,16 @@
     </div>
 
     <!-- حاوية الجدول الدوري -->
-    <main class="flex-grow flex items-center justify-center mb-10">
+    <main class="flex-grow flex items-center justify-center mb-10 mt-4">
         <div class="table-scroll" dir="ltr">
-            <div id="periodic-table" class="periodic-table">
+            <div id="periodic-table" class="periodic-table relative">
                 <!-- سيتم ملء العناصر هنا بواسطة JavaScript -->
             </div>
         </div>
     </main>
 
     <!-- تذييل -->
-    <footer class="text-center py-4 text-slate-500 text-xs border-t border-slate-800 mt-auto">
+    <footer class="text-center py-4 text-slate-500 text-xs border-t border-slate-800 mt-auto relative z-20">
         تم التصميم باستخدام تقنيات الويب الحديثة - واجهة تعليمية تفاعلية
     </footer>
 
@@ -473,6 +528,12 @@
         const tableContainer = document.getElementById('periodic-table');
         const elementsDataArray = [];
 
+        // متغيرات التحدي (Quiz Mode)
+        let isQuizMode = false;
+        let currentQuizElement = null;
+        const quizQuestion = document.getElementById('quiz-question');
+        const quizFeedback = document.getElementById('quiz-feedback');
+
         // إنشاء 118 عنصر
         for (let i = 1; i <= 118; i++) {
             const data = getElementData(i);
@@ -481,7 +542,13 @@
             const elBox = document.createElement('div');
             elBox.className = `element-box ${data.cat}`;
             elBox.dir = 'rtl'; // لضمان عرض النصوص العربية بداخل المربع بشكل سليم
-            elBox.dataset.state = data.baseState; // إضافة حالة المادة للفلترة
+            
+            // خصائص Data للبحث والفلترة
+            elBox.dataset.state = data.baseState; 
+            elBox.dataset.num = data.num;
+            elBox.dataset.symbol = data.symbol.toLowerCase();
+            elBox.dataset.name = data.name;
+
             elBox.style.gridRow = data.row;
             elBox.style.gridColumn = data.col;
             
@@ -494,36 +561,54 @@
                 <span class="el-name">${data.name}</span>
             `;
 
-            // إضافة حدث النقر لفتح النافذة
-            elBox.addEventListener('click', () => openModal(data));
+            // إضافة حدث النقر (يدمج بين التحدي وعرض المعلومات)
+            elBox.addEventListener('click', function() {
+                if (isQuizMode) {
+                    const clickedNum = parseInt(this.dataset.num);
+                    if (clickedNum === currentQuizElement.num) {
+                        // إجابة صحيحة!
+                        this.classList.add('correct-flash');
+                        quizFeedback.className = 'text-sm font-bold mt-3 h-5 text-emerald-400';
+                        quizFeedback.innerText = 'إجابة صحيحة! أحسنت 👏';
+                        setTimeout(() => {
+                            this.classList.remove('correct-flash');
+                            startNextQuestion();
+                        }, 1200);
+                    } else {
+                        // إجابة خاطئة
+                        this.classList.add('wrong-flash');
+                        quizFeedback.className = 'text-sm font-bold mt-3 h-5 text-red-400';
+                        quizFeedback.innerText = 'إجابة خاطئة، حاول مرة أخرى!';
+                        setTimeout(() => {
+                            this.classList.remove('wrong-flash');
+                        }, 500);
+                    }
+                } else {
+                    openModal(data); // عرض المعلومات في الوضع الطبيعي
+                }
+            });
             
             tableContainer.appendChild(elBox);
         }
 
-        // دوال النافذة المنبثقة
+        // --- دوال النافذة المنبثقة ---
         const modalOverlay = document.getElementById('modal-overlay');
 
         function openModal(data) {
-            // تعبئة البيانات
             document.getElementById('modal-number').innerText = data.num;
             document.getElementById('modal-symbol').innerText = data.symbol;
             document.getElementById('modal-name').innerText = data.name;
             document.getElementById('modal-category').innerText = categoryNames[data.cat];
-            
             document.getElementById('modal-discovery').innerText = data.disc;
             document.getElementById('modal-uses').innerText = data.uses;
             document.getElementById('modal-fact').innerText = data.fact;
-            
             document.getElementById('modal-mass').innerText = data.mass;
             document.getElementById('modal-state').innerText = data.state;
 
-            // تغيير لون رأس النافذة بناء على الفئة
             const symbolBox = document.getElementById('modal-symbol-box');
             symbolBox.className = `w-24 h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative ${data.cat}`;
 
-            // إظهار النافذة
             modalOverlay.classList.remove('hidden');
-            // تأخير بسيط لتفعيل الأنيميشن
             setTimeout(() => {
                 modalOverlay.classList.add('active');
                 modalOverlay.style.opacity = '1';
@@ -535,36 +620,41 @@
             modalOverlay.style.opacity = '0';
             setTimeout(() => {
                 modalOverlay.classList.add('hidden');
-            }, 300); // نفس مدة الـ transition في CSS
+            }, 300);
         }
 
-        // إغلاق النافذة عند النقر خارجها
         modalOverlay.addEventListener('click', function(e) {
-            if (e.target === modalOverlay) {
-                closeModal();
-            }
+            if (e.target === modalOverlay) closeModal();
         });
 
-        // إغلاق النافذة عند الضغط على زر Esc
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && !modalOverlay.classList.contains('hidden')) {
-                closeModal();
-            }
+            if (e.key === 'Escape' && !modalOverlay.classList.contains('hidden')) closeModal();
         });
 
-        // فلاتر حالة المادة
+        // --- برمجة فلاتر حالة المادة ---
         const filterBtns = document.querySelectorAll('.filter-btn');
+        const allElements = document.querySelectorAll('.element-box');
+
+        function resetFilters() {
+            filterBtns.forEach(b => {
+                b.classList.remove('bg-slate-700', 'text-white', 'shadow-md');
+                b.classList.add('bg-slate-800', 'text-slate-400');
+            });
+            document.querySelector('[data-filter="all"]').classList.add('bg-slate-700', 'text-white', 'shadow-md');
+        }
+
         filterBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                filterBtns.forEach(b => {
-                    b.classList.remove('bg-slate-700', 'text-white', 'shadow-md');
-                    b.classList.add('bg-slate-800', 'text-slate-400');
-                });
+                if(isQuizMode) return; // تعطيل الفلاتر أثناء التحدي
+
+                resetFilters();
                 btn.classList.remove('bg-slate-800', 'text-slate-400');
                 btn.classList.add('bg-slate-700', 'text-white', 'shadow-md');
 
                 const selectedFilter = btn.dataset.filter;
-                const allElements = document.querySelectorAll('.element-box');
+                
+                // مسح شريط البحث عند استخدام الفلاتر
+                document.getElementById('search-input').value = '';
 
                 allElements.forEach(el => {
                     if (selectedFilter === 'all' || el.dataset.state === selectedFilter) {
@@ -575,6 +665,87 @@
                 });
             });
         });
+
+        // --- برمجة شريط البحث الذكي ---
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', (e) => {
+            if(isQuizMode) return; // تعطيل البحث أثناء التحدي
+
+            const term = e.target.value.toLowerCase().trim();
+            
+            // إعادة الفلتر إلى "الكل" عند بدء البحث
+            if (term !== '') resetFilters();
+
+            allElements.forEach(el => {
+                if (term === '') {
+                    el.classList.remove('dimmed'); // إظهار الكل إذا كان البحث فارغاً
+                    return;
+                }
+                
+                const num = el.dataset.num;
+                const sym = el.dataset.symbol;
+                const name = el.dataset.name;
+                
+                if (num === term || sym.includes(term) || name.includes(term)) {
+                    el.classList.remove('dimmed');
+                } else {
+                    el.classList.add('dimmed');
+                }
+            });
+        });
+
+        // --- برمجة وضع التحدي (Quiz Mode) ---
+        const quizToggleBtn = document.getElementById('quiz-toggle');
+        const quizPanel = document.getElementById('quiz-panel');
+        const stateFiltersDiv = document.getElementById('state-filters');
+
+        // نختار العناصر الطبيعية (حتى اليورانيوم 92) ليكون التحدي منطقياً
+        const quizElementsPool = elementsDataArray.filter(e => e.num <= 92);
+
+        function startNextQuestion() {
+            const randomIndex = Math.floor(Math.random() * quizElementsPool.length);
+            currentQuizElement = quizElementsPool[randomIndex];
+            quizQuestion.innerText = `أين يقع عنصر (${currentQuizElement.name})؟`;
+            quizFeedback.innerText = '';
+        }
+
+        quizToggleBtn.addEventListener('click', () => {
+            isQuizMode = !isQuizMode;
+            
+            if (isQuizMode) {
+                // تفعيل التحدي
+                quizToggleBtn.innerHTML = '❌ إنهاء التحدي';
+                quizToggleBtn.classList.replace('from-purple-600', 'from-red-600');
+                quizToggleBtn.classList.replace('to-indigo-600', 'to-red-700');
+                
+                quizPanel.classList.remove('hidden');
+                tableContainer.classList.add('quiz-active'); // لإخفاء النصوص
+                
+                // تعطيل وإخفاء أدوات البحث والفلترة
+                searchInput.value = '';
+                searchInput.disabled = true;
+                stateFiltersDiv.classList.add('opacity-50', 'pointer-events-none');
+                
+                // إظهار كل العناصر استعداداً للتحدي
+                allElements.forEach(el => el.classList.remove('dimmed'));
+                
+                startNextQuestion();
+            } else {
+                // إنهاء التحدي
+                quizToggleBtn.innerHTML = '🎮 وضع التحدي';
+                quizToggleBtn.classList.replace('from-red-600', 'from-purple-600');
+                quizToggleBtn.classList.replace('to-red-700', 'to-indigo-600');
+                
+                quizPanel.classList.add('hidden');
+                tableContainer.classList.remove('quiz-active'); // استعادة النصوص
+                
+                // تفعيل البحث والفلترة
+                searchInput.disabled = false;
+                stateFiltersDiv.classList.remove('opacity-50', 'pointer-events-none');
+                resetFilters();
+            }
+        });
+
     </script>
 </body>
 </html>
