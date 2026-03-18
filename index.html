@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>الجدول الدوري التفاعلي</title>
     <!-- استخدام خطوط جوجل العربية لتصميم أجمل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -20,17 +20,26 @@
         .table-scroll {
             width: 100%;
             overflow-x: auto;
-            padding: 20px 0;
+            padding: 10px 0 20px 0;
+            -webkit-overflow-scrolling: touch; /* لتحسين نعومة التمرير في الآيفون */
         }
 
         /* شبكة الجدول الدوري */
         .periodic-table {
             display: grid;
             grid-template-columns: repeat(18, minmax(60px, 1fr));
-            gap: 6px;
-            min-width: 1100px; /* لضمان عدم تداخل العناصر */
+            gap: 4px; /* تقليل المسافة قليلاً للجوال */
+            min-width: 1000px; /* لضمان عدم تداخل العناصر */
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .periodic-table {
+                gap: 6px;
+                min-width: 1100px;
+                padding: 20px;
+            }
         }
 
         /* تصميم المربع الخاص بكل عنصر */
@@ -65,31 +74,37 @@
         }
 
         .el-number {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             position: absolute;
-            top: 4px;
-            right: 6px; /* نقلناه لليمين لكي لا يتلامس مع الرموز الإنجليزية التي تتمدد لليسار */
+            top: 2px;
+            right: 4px;
             opacity: 0.8;
             font-weight: 700;
         }
 
         .el-symbol {
-            font-size: 1.15rem; /* تصغير الحجم قليلاً */
+            font-size: 1rem;
             font-weight: 900;
             line-height: 1;
-            margin-top: 16px; /* زيادة المسافة العلوية لدفعه للأسفل بعيداً عن الرقم */
+            margin-top: 10px;
             transition: opacity 0.3s ease;
         }
 
         .el-name {
-            font-size: 0.65rem;
-            margin-top: 4px;
+            font-size: 0.55rem;
+            margin-top: 2px;
             text-align: center;
-            width: 90%;
+            width: 95%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             transition: opacity 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            .el-number { font-size: 0.75rem; top: 4px; right: 6px; }
+            .el-symbol { font-size: 1.15rem; margin-top: 16px; }
+            .el-name { font-size: 0.65rem; margin-top: 4px; width: 90%; }
         }
 
         /* تنسيقات وضع التحدي (Quiz Mode) */
@@ -145,16 +160,27 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             transform: scale(0.95);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 90vh; /* مهم جداً للجوال لمنع الخروج عن الشاشة */
+            display: flex;
+            flex-direction: column;
         }
 
         #modal-overlay.active .modal-content {
             transform: scale(1);
         }
+        
+        .modal-body-scroll {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
 
         /* تخصيص شريط التمرير */
         ::-webkit-scrollbar {
-            height: 10px;
-            width: 10px;
+            height: 6px;
+            width: 6px;
+        }
+        @media (min-width: 768px) {
+            ::-webkit-scrollbar { height: 10px; width: 10px; }
         }
         ::-webkit-scrollbar-track {
             background: #1e293b; 
@@ -166,69 +192,81 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #64748b; 
         }
+        
+        /* تأثير النبض لنص التمرير في الجوال */
+        .animate-pulse-slow {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
     <!-- الرأس -->
-    <header class="text-center py-8 bg-slate-800 border-b border-slate-700 shadow-lg relative z-20">
-        <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-emerald-400 mb-2 py-4 leading-relaxed">
+    <header class="text-center py-6 md:py-8 bg-slate-800 border-b border-slate-700 shadow-lg relative z-20 px-4">
+        <h1 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-emerald-400 mb-2 py-2 md:py-4 leading-relaxed">
             الجدول الدوري التفاعلي
         </h1>
-        <p class="text-slate-400 text-sm md:text-base">انقر على أي عنصر لاستكشاف خصائصه، تاريخ اكتشافه، وأبرز استخداماته في حياتنا.</p>
+        <p class="text-slate-400 text-xs md:text-base">انقر على أي عنصر لاستكشاف خصائصه، تاريخ اكتشافه، وأبرز استخداماته.</p>
     </header>
 
     <!-- أدوات التحكم والبحث والتحدي -->
-    <div class="max-w-6xl mx-auto px-4 mt-8 w-full flex flex-col items-center gap-6">
+    <div class="max-w-6xl mx-auto px-4 mt-6 md:mt-8 w-full flex flex-col items-center gap-4 md:gap-6">
         
         <!-- شريط البحث ووضع التحدي -->
-        <div class="flex flex-col md:flex-row gap-4 w-full justify-center items-center max-w-3xl">
+        <div class="flex flex-col md:flex-row gap-3 md:gap-4 w-full justify-center items-center max-w-3xl">
             <!-- شريط البحث -->
             <div class="relative w-full">
-                <input type="text" id="search-input" placeholder="ابحث بالاسم (حديد)، الرمز (Fe)، أو الرقم الذري (26)..." class="w-full bg-slate-800 border border-slate-600 text-white px-10 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm shadow-inner disabled:opacity-50 disabled:cursor-not-allowed">
+                <!-- text-base مهمة جداً لمنع الـ Zoom التلقائي في الآيفون -->
+                <input type="text" id="search-input" placeholder="ابحث بالاسم (حديد)، الرمز (Fe)، أو الرقم..." class="w-full bg-slate-800 border border-slate-600 text-white px-10 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-base md:text-sm shadow-inner disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg class="w-5 h-5 absolute right-3 top-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
             
             <!-- زر التحدي -->
-            <button id="quiz-toggle" class="whitespace-nowrap bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 min-w-[160px]">
+            <button id="quiz-toggle" class="whitespace-nowrap w-full md:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 min-w-[160px]">
                 <span>🎮 وضع التحدي</span>
             </button>
         </div>
 
         <!-- لوحة عرض سؤال التحدي (مخفية افتراضياً) -->
-        <div id="quiz-panel" class="hidden w-full max-w-2xl bg-indigo-900/40 border border-indigo-500/30 p-5 rounded-2xl text-center shadow-lg transform transition-all">
-            <p class="text-indigo-300 text-sm font-bold mb-2 tracking-wide">🎯 سؤال التحدي الحالي:</p>
-            <h3 id="quiz-question" class="text-2xl md:text-3xl font-black text-white drop-shadow-md">أين يقع عنصر ...؟</h3>
-            <p id="quiz-feedback" class="text-sm font-bold mt-3 h-5 text-emerald-400 transition-colors"></p>
+        <div id="quiz-panel" class="hidden w-full max-w-2xl bg-indigo-900/40 border border-indigo-500/30 p-4 md:p-5 rounded-2xl text-center shadow-lg transform transition-all">
+            <p class="text-indigo-300 text-xs md:text-sm font-bold mb-2 tracking-wide">🎯 سؤال التحدي الحالي:</p>
+            <h3 id="quiz-question" class="text-xl md:text-3xl font-black text-white drop-shadow-md">أين يقع عنصر ...؟</h3>
+            <p id="quiz-feedback" class="text-sm font-bold mt-2 md:mt-3 h-5 text-emerald-400 transition-colors"></p>
         </div>
 
         <!-- مفتاح الألوان (Legend) -->
-        <div class="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold">
-            <span class="px-3 py-1 rounded-full bg-blue-600 text-white shadow">لا فلزات</span>
-            <span class="px-3 py-1 rounded-full bg-red-600 text-white shadow">فلزات قلوية</span>
-            <span class="px-3 py-1 rounded-full bg-orange-600 text-white shadow">قلوية ترابية</span>
-            <span class="px-3 py-1 rounded-full bg-yellow-600 text-white shadow">فلزات انتقالية</span>
-            <span class="px-3 py-1 rounded-full bg-green-600 text-white shadow">بعد انتقالية</span>
-            <span class="px-3 py-1 rounded-full bg-teal-600 text-white shadow">أشباه الفلزات</span>
-            <span class="px-3 py-1 rounded-full bg-purple-600 text-white shadow">هالوجينات</span>
-            <span class="px-3 py-1 rounded-full bg-pink-600 text-white shadow">غازات نبيلة</span>
-            <span class="px-3 py-1 rounded-full bg-stone-500 text-white shadow">لانثانيدات</span>
-            <span class="px-3 py-1 rounded-full bg-stone-700 text-white shadow">أكتينيدات</span>
+        <div class="flex flex-wrap justify-center gap-2 md:gap-3 text-[10px] md:text-sm font-bold">
+            <span class="px-2 md:px-3 py-1 rounded-full bg-blue-600 text-white shadow">لا فلزات</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-red-600 text-white shadow">فلزات قلوية</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-orange-600 text-white shadow">قلوية ترابية</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-yellow-600 text-white shadow">فلزات انتقالية</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-green-600 text-white shadow">بعد انتقالية</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-teal-600 text-white shadow">أشباه فلزات</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-purple-600 text-white shadow">هالوجينات</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-pink-600 text-white shadow">غازات نبيلة</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-stone-500 text-white shadow">لانثانيدات</span>
+            <span class="px-2 md:px-3 py-1 rounded-full bg-stone-700 text-white shadow">أكتينيدات</span>
         </div>
 
         <!-- فلتر حالات المادة -->
-        <div class="flex justify-center gap-3 text-sm mt-2" id="state-filters">
-            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-700 text-white font-bold transition-all shadow-md" data-filter="all">الكل</button>
-            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="solid">صلب</button>
-            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="liquid">سائل</button>
-            <button class="filter-btn px-6 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white" data-filter="gas">غاز</button>
+        <div class="flex flex-wrap justify-center gap-2 md:gap-3 text-xs md:text-sm mt-1" id="state-filters">
+            <button class="filter-btn px-4 md:px-6 py-1.5 md:py-2 rounded-lg bg-slate-700 text-white font-bold transition-all shadow-md flex-grow md:flex-grow-0" data-filter="all">الكل</button>
+            <button class="filter-btn px-4 md:px-6 py-1.5 md:py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white flex-grow md:flex-grow-0" data-filter="solid">صلب</button>
+            <button class="filter-btn px-4 md:px-6 py-1.5 md:py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white flex-grow md:flex-grow-0" data-filter="liquid">سائل</button>
+            <button class="filter-btn px-4 md:px-6 py-1.5 md:py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 font-bold transition-all hover:bg-slate-700 hover:text-white flex-grow md:flex-grow-0" data-filter="gas">غاز</button>
         </div>
     </div>
 
     <!-- حاوية الجدول الدوري -->
-    <main class="flex-grow flex items-center justify-center mb-10 mt-4">
+    <main class="flex-grow flex flex-col items-center justify-start md:justify-center mb-10 mt-6 w-full px-2">
+        <!-- تلميح مخصص للجوال فقط -->
+        <div class="md:hidden text-emerald-400 text-xs text-center mb-1 animate-pulse-slow font-bold flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+            اسحب لليمين واليسار لرؤية الجدول كاملاً
+        </div>
+        
         <div class="table-scroll" dir="ltr">
             <div id="periodic-table" class="periodic-table relative">
                 <!-- سيتم ملء العناصر هنا بواسطة JavaScript -->
@@ -242,62 +280,63 @@
     </footer>
 
     <!-- النافذة المنبثقة (Modal) -->
-    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content w-full max-w-2xl rounded-2xl overflow-hidden relative">
-            <!-- زر الإغلاق -->
-            <button onclick="closeModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <!-- تم تقليل الحواف padding في الجوال لعدم هدر المساحة -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center p-3 md:p-6">
+        <div class="modal-content w-full max-w-2xl rounded-2xl relative">
+            <!-- زر الإغلاق: تم تحسينه للجوال -->
+            <button onclick="closeModal()" class="absolute top-3 left-3 md:top-4 md:left-4 z-50 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 p-1.5 rounded-full transition-colors backdrop-blur-sm border border-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-7 md:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
             
-            <!-- رأس النافذة المنبثقة -->
-            <div id="modal-header" class="p-8 pb-6 flex items-center gap-6 text-white">
-                <div id="modal-symbol-box" class="w-24 h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative">
-                    <span id="modal-number" class="text-sm font-bold opacity-80 absolute top-2 right-3"></span>
-                    <span id="modal-symbol" class="text-5xl font-black"></span>
+            <!-- رأس النافذة المنبثقة: تم تغييره ليكون عمودياً في الجوال وأفقياً في الكمبيوتر -->
+            <div id="modal-header" class="p-5 md:p-8 pb-4 md:pb-6 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-right gap-4 md:gap-6 text-white shrink-0 border-b border-white/5">
+                <div id="modal-symbol-box" class="w-20 h-20 md:w-24 md:h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative shrink-0">
+                    <span id="modal-number" class="text-xs md:text-sm font-bold opacity-80 absolute top-1.5 right-2 md:top-2 md:right-3"></span>
+                    <span id="modal-symbol" class="text-4xl md:text-5xl font-black"></span>
                 </div>
-                <div>
-                    <h2 id="modal-name" class="text-4xl font-black mb-4"></h2>
-                    <span id="modal-category" class="px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm inline-block"></span>
+                <div class="pt-1 md:pt-0">
+                    <h2 id="modal-name" class="text-3xl md:text-4xl font-black mb-2 md:mb-4"></h2>
+                    <span id="modal-category" class="px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold bg-white/20 backdrop-blur-sm inline-block"></span>
                 </div>
             </div>
 
-            <!-- محتوى النافذة المنبثقة -->
-            <div class="p-8 pt-4 bg-slate-800/50">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- محتوى النافذة المنبثقة (قابل للتمرير) -->
+            <div class="p-5 md:p-8 pt-4 md:pt-6 bg-slate-800/50 modal-body-scroll">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4">
-                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-emerald-400 font-bold mb-1 flex items-center gap-2">
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 shadow-sm">
+                            <h3 class="text-emerald-400 font-bold mb-2 flex items-center gap-2 text-sm md:text-base">
                                 📅 متى تم اكتشافه؟
                             </h3>
-                            <p id="modal-discovery" class="text-sm text-slate-300 leading-relaxed"></p>
+                            <p id="modal-discovery" class="text-xs md:text-sm text-slate-300 leading-relaxed"></p>
                         </div>
-                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-blue-400 font-bold mb-1 flex items-center gap-2">
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 shadow-sm">
+                            <h3 class="text-blue-400 font-bold mb-2 flex items-center gap-2 text-sm md:text-base">
                                 💡 أشهر الاستخدامات
                             </h3>
-                            <p id="modal-uses" class="text-sm text-slate-300 leading-relaxed"></p>
+                            <p id="modal-uses" class="text-xs md:text-sm text-slate-300 leading-relaxed"></p>
                         </div>
                     </div>
                     
                     <div class="space-y-4">
-                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700 h-full">
-                            <h3 class="text-purple-400 font-bold mb-1 flex items-center gap-2">
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 shadow-sm h-full flex flex-col">
+                            <h3 class="text-purple-400 font-bold mb-2 flex items-center gap-2 text-sm md:text-base">
                                 🧠 معلومة ذكية
                             </h3>
-                            <p id="modal-fact" class="text-sm text-slate-300 leading-relaxed"></p>
+                            <p id="modal-fact" class="text-xs md:text-sm text-slate-300 leading-relaxed flex-grow"></p>
                             
-                            <hr class="border-slate-700 my-4">
+                            <hr class="border-slate-700/50 my-4">
                             
-                            <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="grid grid-cols-2 gap-3 text-sm bg-slate-800/50 p-3 rounded-lg">
                                 <div>
-                                    <span class="text-slate-500 block text-xs">الوزن الذري</span>
-                                    <strong id="modal-mass" class="text-slate-200"></strong>
+                                    <span class="text-slate-500 block text-[10px] md:text-xs mb-1">الوزن الذري</span>
+                                    <strong id="modal-mass" class="text-slate-200 text-xs md:text-sm"></strong>
                                 </div>
                                 <div>
-                                    <span class="text-slate-500 block text-xs">الحالة الفيزيائية</span>
-                                    <strong id="modal-state" class="text-slate-200"></strong>
+                                    <span class="text-slate-500 block text-[10px] md:text-xs mb-1">الحالة الفيزيائية</span>
+                                    <strong id="modal-state" class="text-slate-200 text-xs md:text-sm"></strong>
                                 </div>
                             </div>
                         </div>
@@ -553,7 +592,7 @@
             elBox.style.gridColumn = data.col;
             
             // إضافة مسافة للصفوف المنفصلة (اللانثانيدات والأكتينيدات)
-            if (data.row === 9) elBox.style.marginTop = '20px';
+            if (data.row === 9) elBox.style.marginTop = window.innerWidth < 768 ? '10px' : '20px';
 
             elBox.innerHTML = `
                 <span class="el-number">${data.num}</span>
@@ -568,7 +607,7 @@
                     if (clickedNum === currentQuizElement.num) {
                         // إجابة صحيحة!
                         this.classList.add('correct-flash');
-                        quizFeedback.className = 'text-sm font-bold mt-3 h-5 text-emerald-400';
+                        quizFeedback.className = 'text-sm font-bold mt-2 md:mt-3 h-5 text-emerald-400';
                         quizFeedback.innerText = 'إجابة صحيحة! أحسنت 👏';
                         setTimeout(() => {
                             this.classList.remove('correct-flash');
@@ -577,7 +616,7 @@
                     } else {
                         // إجابة خاطئة
                         this.classList.add('wrong-flash');
-                        quizFeedback.className = 'text-sm font-bold mt-3 h-5 text-red-400';
+                        quizFeedback.className = 'text-sm font-bold mt-2 md:mt-3 h-5 text-red-400';
                         quizFeedback.innerText = 'إجابة خاطئة، حاول مرة أخرى!';
                         setTimeout(() => {
                             this.classList.remove('wrong-flash');
@@ -606,12 +645,16 @@
             document.getElementById('modal-state').innerText = data.state;
 
             const symbolBox = document.getElementById('modal-symbol-box');
-            symbolBox.className = `w-24 h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative ${data.cat}`;
+            symbolBox.className = `w-20 h-20 md:w-24 md:h-24 rounded-xl flex flex-col items-center justify-center shadow-lg border-2 border-white/20 relative shrink-0 ${data.cat}`;
+
+            // التأكد من أن التمرير في النافذة يبدأ من الأعلى عند فتح عنصر جديد
+            document.querySelector('.modal-body-scroll').scrollTop = 0;
 
             modalOverlay.classList.remove('hidden');
             setTimeout(() => {
                 modalOverlay.classList.add('active');
                 modalOverlay.style.opacity = '1';
+                document.body.style.overflow = 'hidden'; // منع تمرير الصفحة بالخلفية
             }, 10);
         }
 
@@ -620,6 +663,7 @@
             modalOverlay.style.opacity = '0';
             setTimeout(() => {
                 modalOverlay.classList.add('hidden');
+                document.body.style.overflow = ''; // استعادة تمرير الصفحة
             }, 300);
         }
 
